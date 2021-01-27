@@ -51,6 +51,10 @@ handlers.add_handler('trust_ping', '1.0', noop)
 routes: RouteTableDef = web.RouteTableDef()
 
 
+
+
+
+
 async def main(loop):
     global port
     global server
@@ -65,6 +69,7 @@ async def main(loop):
    # await loop.create_task(example(loop))
 
     return web.Response(text='Success')
+
 
 
 if __name__ == '__main__':
