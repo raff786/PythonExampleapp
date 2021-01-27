@@ -44,31 +44,32 @@ def make_spinner(msg):
     return Halo(text=f'{msg} ... ', spinner='line', interval=450, color=None, placement='right')
 
 
-# def console_input(request, default_value=None):
-#     print()
-#     if default_value:
-#         print(f'{request}:')
-#         print(f'{ANSII_GREEN}{default_value}{ANSII_RESET} is set via environment variable')
-#         input('Press any key to continue')
-#         return default_value
-#     else:
-#         val = input(f"{request}: ").strip()
-#         if not val:
-#             return ""
-#         return val
+def console_input(request, default_value=None):
+    print()
+    if default_value:
+        print(f'{request}:')
+        print(f'{ANSII_GREEN}{default_value}{ANSII_RESET} is set via environment variable')
+        input('Press any key to continue')
+        return default_value
+    else:
+        val = input(f"{request}: ").strip()
+        if not val:
+            return ""
+        return val
 
-# def console_yes_no(request, default_yes):
-#     yes_no = "[y]/n" if default_yes else "y/n"
-#     modified_request = request + "? " + yes_no
-#     response = console_input(modified_request).strip().lower()
-#
-#     if default_yes and not response:
-#         return True
-#     elif "y" == response:
-#         return True
-#     elif "n" == response:
-#         return False
-#     raise Exception("Did not get a valid response -- '" + response + "' is not y or n")
+
+def console_yes_no(request, default_yes):
+    yes_no = "[y]/n" if default_yes else "y/n"
+    modified_request = request + "? " + yes_no
+    response = console_input(modified_request).strip().lower()
+
+    if default_yes and not response:
+        return True
+    elif "y" == response:
+        return True
+    elif "n" == response:
+        return False
+    raise Exception("Did not get a valid response -- '" + response + "' is not y or n")
 
 
 def print_error(*args, **kwargs):
