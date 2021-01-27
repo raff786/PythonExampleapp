@@ -582,8 +582,6 @@ async def endpoint_handler(request):
         return web.Response(text=str(e))
 
 
-
-
 async def main(loop):
     global port
     global server
@@ -598,7 +596,6 @@ async def main(loop):
    # await loop.create_task(example(loop))
 
     return web.Response(text='Success')
-
 
 
 if __name__ == '__main__':
