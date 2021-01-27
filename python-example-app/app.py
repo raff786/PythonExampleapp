@@ -30,3 +30,22 @@ from indy.wallet import delete_wallet
 from indy.error import WalletNotFoundError
 
 from helper import *
+
+
+INSTITUTION_NAME: str = 'NHS'
+LOGO_URL: str = 'https://www.u-print.org/wp-content/uploads/2018/12/NHS-Logo.png'
+CONFIG_PATH: str = 'verity-context.json'
+WALLET_NAME: str = 'examplewallet1'
+WALLET_KEY: str = 'examplewallet1'
+
+context: Context
+issuer_did: str = ''
+issuer_verkey: str = ''
+
+server: Server
+port: int = 4000
+handlers: Handlers = Handlers()
+handlers.set_default_handler(default_handler)
+handlers.add_handler('trust_ping', '1.0', noop)
+
+routes: RouteTableDef = web.RouteTableDef()
