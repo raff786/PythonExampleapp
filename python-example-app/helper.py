@@ -52,11 +52,10 @@ def console_input(request, default_value=None):
         input('Press any key to continue')
         return default_value
     else:
-        # val = input(f"{request}: ").strip()
-        # if not val:
-        #     return ""
-        return "abc"
-
+        val = input(f"{request}: ").strip()
+        if not val:
+            return ""
+        return val
 
 def console_yes_no(request, default_yes):
     yes_no = "[y]/n" if default_yes else "y/n"
