@@ -49,3 +49,19 @@ handlers.set_default_handler(default_handler)
 handlers.add_handler('trust_ping', '1.0', noop)
 
 routes: RouteTableDef = web.RouteTableDef()
+
+
+async def main(loop):
+    global port
+    global server
+
+    app = web.Application(loop=loop)
+    app.add_routes(routes)
+
+    # noinspection PyDeprecation
+    server = await loop.create_server(app.make_handler(), '0.0.0.0', port)
+
+    print('Listening on port {}'.format(port))
+   # await loop.create_task(example(loop))
+
+    return web.Response(text='Success')
