@@ -593,9 +593,9 @@ async def main(loop):
     server = await loop.create_server(app.make_handler(), '0.0.0.0', port)
 
     print('Listening on port {}'.format(port))
-   # await loop.create_task(example(loop))
+    await loop.create_task(example(loop))
 
-    return web.Response(text='Success')
+    #return web.Response(text='Success')
 
 
 if __name__ == '__main__':
