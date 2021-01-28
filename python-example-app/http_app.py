@@ -1,8 +1,4 @@
-# def sum_2(a, b):
-#     return a+b
-#
-#
-# sum_2(5, 6)
+__copyright__ = 'COPYRIGHT 2013-2019, ALL RIGHTS RESERVED, EVERNYM INC.'
 
 import logging
 import os
@@ -13,6 +9,9 @@ import asyncio
 from asyncio.base_events import Server
 from aiohttp import web
 from aiohttp.web_routedef import RouteTableDef
+import jinja2
+import aiohttp_jinja2
+
 from verity_sdk.handlers import Handlers
 from verity_sdk.protocols.v0_6.IssuerSetup import IssuerSetup
 from verity_sdk.protocols.v0_6.UpdateConfigs import UpdateConfigs
@@ -27,18 +26,21 @@ from verity_sdk.protocols.v1_0.Relationship import Relationship
 from verity_sdk.protocols.v1_0.CommittedAnswer import CommittedAnswer
 from verity_sdk.utils.Context import Context
 from indy.wallet import delete_wallet
-from indy.error import WalletNotFoundError
+from indy import crypto
+from indy.error import WalletNotFoundError, WalletAlreadyOpenedError
+
 
 from helper import *
 
-
-INSTITUTION_NAME: str = 'NHS'
-LOGO_URL: str = 'https://www.u-print.org/wp-content/uploads/2018/12/NHS-Logo.png'
+INSTITUTION_NAME: str = 'Faber College'
+LOGO_URL: str = 'https://freeiconshop.com/wp-content/uploads/edd/bank-flat.png'
 CONFIG_PATH: str = 'verity-context.json'
 WALLET_NAME: str = 'examplewallet1'
 WALLET_KEY: str = 'examplewallet1'
+QR_CODE_STRING: str = ""
+# qr_code_string: str = ""
 
-context: Context
+context = Context
 issuer_did: str = ''
 issuer_verkey: str = ''
 
@@ -49,48 +51,51 @@ handlers.set_default_handler(default_handler)
 handlers.add_handler('trust_ping', '1.0', noop)
 
 routes: RouteTableDef = web.RouteTableDef()
+# schema_id_fix = 'WyK6ZvAdyxLyycGqcVXuBG:2:CIS_Digital_Credentials:893.893.893'
+# cred_def_id_fix = 'WyK6ZvAdyxLyycGqcVXuBG:3:CL:172247:version1.0'
+# schema_id_fix = ""
+cred_def_id_fix = "DGCGw4hAwb6ZL1JpmgPwCW:3:CL:173845:latest"
+schema_id_fix = "DGCGw4hAwb6ZL1JpmgPwCW:2:CIS_Digital_Credentials:348.77.579"
+rel_did = ''
+loop = ''
+
 
 async def example(loop):
+    print("STRAT APIIIIIIIIIIIIIIIIi")
     logging.info('Starting setup')
+    is_schema_created = True
     await setup(loop)
+    schema_id = schema_id_fix
+    cred_def_id = cred_def_id_fix
+    print(schema_id)
+
+    if not is_schema_created:
+        schema_id = await write_ledger_schema(loop)
+        print("Schema_ID")
+        print(schema_id)
+
+        cred_def_id = await write_ledger_cred_def(loop, schema_id)
+        print("Credential cred_def_id")
+        print(cred_def_id)
+    global rel_did
 
     rel_did = await create_relationship(loop)
-    await create_connection(loop)
 
-    await ask_question(loop, rel_did)
+    # rel_did = "PgqSRH1PcUcZxCgpH4omQc"
+    # await call_more(loop, rel_did)
 
-    schema_id = await write_ledger_schema(loop)
-    cred_def_id = await write_ledger_cred_def(loop, schema_id)
+    # await update_webhook_endpoint()
 
-    await issue_credential(loop, rel_did, cred_def_id)
-
-    await request_proof(loop, rel_did)
+    print("RelationShip DID")
+    print(rel_did)
 
 
-# schema_id_fix = "MpEPh8GCLRjbDbde7yVrMa:2:Diploma:991.991.991"
-# cred_def_id_fix = "MpEPh8GCLRjbDbde7yVrMa:3:CL:173853:latest"
-#
-#
-# async def example(loop):
-#     logging.info('Starting setup')
-#     is_schema_created = True
-#     await setup(loop)
-#     schema_id = schema_id_fix
-#     cred_def_id = cred_def_id_fix
-#     print(schema_id)
-#     if not is_schema_created:
-#         schema_id = await write_ledger_schema(loop)
-#         print("Schema_ID")
-#         print(schema_id)
-#         cred_def_id = await write_ledger_cred_def(loop, schema_id)
-#         print("Credential cred_def_id")
-#         print(cred_def_id)
-#     rel_did = await create_relationship(loop)
-#     print("RelationShip DID")
-#     print(rel_did)
+# async def call_more(loop, rel_did):
 #     await create_connection(loop)
+#
 #     await ask_question(loop, rel_did)
-#     await issue_credential(loop, rel_did, cred_def_id)
+#
+#     await issue_credential(loop, rel_did, cred_def_id_fix)
 
 
 async def create_relationship(loop) -> str:
@@ -136,14 +141,24 @@ async def create_relationship(loop) -> str:
 
     # handler for the accept message sent when invitation is created
     async def invitation_handler(msg_name, message):
+        global QR_CODE_STRING
         spinner.stop_and_persist('Done')
         print_message(msg_name, message)
         if msg_name == Relationship.INVITATION:
             invite_url = message['inviteURL']
             # write QRCode to disk
             qr = pyqrcode.create(invite_url)
-            qr.png('qrcode.png')
-
+            QR_CODE_STRING = qr.png_as_base64_str(scale=5)
+            print(dir(qr))
+            print("++++++++++++++++++++++++++++++++++++++++++++")
+            # SEND CODE TO EMAIL
+            # send_email()
+            qr.png("qrcode.png")
+            # await send_using_gmail(loop)
+            # qr.png('qrcode_{}.png'.format(rel_did))
+            print("INVITE URLSSS", QR_CODE_STRING)
+            print("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
+            print(f'{ANSII_GREEN}/python-example-app/qrcode.html{ANSII_RESET}')
             if os.environ.get('HTTP_SERVER_URL'):
                 print('Open the following URL in your browser and scan presented QR code')
                 print(f'{ANSII_GREEN}{os.environ.get("HTTP_SERVER_URL")}/python-example-app/qrcode.html{ANSII_RESET}')
@@ -174,11 +189,13 @@ async def create_connection(loop):
     # i.e. when the RESPONSE_SENT control message is received
 
     connection = loop.create_future()
+    print("THERE in create_connection")
 
     spinner = make_spinner('Waiting to respond to connection')  # Console spinner
 
     # handler for messages in Connecting protocol
     async def connection_handler(msg_name, message):
+        print("THERE in connection HANDLERSSS")
         if msg_name == Connecting.REQUEST_RECEIVED:
             print()
             print_message(msg_name, message)
@@ -195,16 +212,20 @@ async def create_connection(loop):
     spinner.start()
 
     # waits for request
-    await connection  # wait for response from verity application
+    try:
+        await connection  # wait for response from verity application
+    except Exception as e:
+        print("CONNECTION USSSYEEEEEEEE, ", e)
 
 
 async def write_ledger_schema(loop) -> str:
     # input parameters for schema
-    schema_name = 'Diploma'
+    schema_name = 'CIS_Digital_Credentials'
     schema_version = get_random_version()
-    schema_attrs = ['title', 'email', 'first_name', 'surname', 'date_of_birth', 'national_insurance_number',
-                    'identity_assurance_level', 'uuid', 'user_photograph_link'
-                    ]
+    # schema_attrs = ['name', 'degree']
+    schema_attrs = ['title', 'first_name', 'surname', 'date_of_birth',
+                    'national_insurance_number', 'identity_assurance_level',
+                    'uuid', 'user_photograph', 'user_photograph_hash']
 
     # constructor for the Write Schema protocol
     schema = WriteSchema(schema_name, schema_version, schema_attrs)
@@ -270,6 +291,7 @@ async def write_ledger_cred_def(loop, schema_id: str) -> str:
 
 
 async def ask_question(loop, for_did):
+    print("IN ASK QUESTION")
     question_text = 'Hi Alice, how are you today?'
     question_detail = 'Checking up on you today.'
     valid_responses = ['Great!', 'Not so good.']
@@ -285,6 +307,7 @@ async def ask_question(loop, for_did):
         if msg_name == CommittedAnswer.ANSWER_GIVEN:
             first_step.set_result(None)
         else:
+            print("ASK QUESTION NOT HANDLEDD")
             non_handled(f'Message name is not handled - {msg_name}', message)
 
     handlers.add_handler(CommittedAnswer.MSG_FAMILY, CommittedAnswer.MSG_FAMILY_VERSION, receive_answer)
@@ -296,11 +319,8 @@ async def ask_question(loop, for_did):
 
 
 async def issue_credential(loop, rel_did, cred_def_id):
-    # input parameters for issue credential
-
-    with open('Credential_Definition_Data.json') as f:
+    with open('sample_data.json') as f:
         data = json.load(f)
-
     credential_name = 'CISDigitalCredential'
     credential_data = data
 
@@ -313,11 +333,13 @@ async def issue_credential(loop, rel_did, cred_def_id):
 
     # handler for 'sent` message when the offer for credential is sent
     async def send_offer_handler(msg_name, message):
+        print("SEND CRDDSSSSSS")
         spinner.stop_and_persist('Done')
         print_message(msg_name, message)
         if msg_name == IssueCredential.SENT:
             offer_sent.set_result(None)
         else:
+            print("SEND CRDDSSSSSS NOT HANDLEDD")
             non_handled(f'Message name is not handled - {msg_name}', message)
 
     # adds handler to the set of handlers
@@ -354,11 +376,11 @@ async def request_proof(loop, for_did):
     proof_name = 'Proof of Degree'
     proof_attrs = [
         {
-            'name': 'first_name',
+            'name': 'name',
             'restrictions': [{'issuer_did': issuer_did}]
         },
         {
-            'name': 'identity_assurance_level',
+            'name': 'degree',
             'restrictions': [{'issuer_did': issuer_did}]
         }
     ]
@@ -394,19 +416,38 @@ async def setup(loop):
 
     config = ''
     # look for context on disk
-    try:
-        with open(CONFIG_PATH, 'r') as f:
-            if console_yes_no(f'Reuse Verity Context (in {CONFIG_PATH})', True):
-                config = f.read()
-            else:
-                await delete_wallet(json.dumps({'id': WALLET_NAME}), json.dumps({'key': WALLET_KEY}))
-    except (FileNotFoundError, WalletNotFoundError):
-        pass
+    # try:
+    #     with open(CONFIG_PATH, 'r') as f:
+    #         if console_yes_no(f'Reuse Verity Context (in {CONFIG_PATH})', True):
+    #             config = f.read()
+    #         else:
+    #             await delete_wallet(json.dumps({'id': WALLET_NAME}), json.dumps({'key': WALLET_KEY}))
+    # except (FileNotFoundError, WalletNotFoundError):
+    #     pass
+    #
+    # if config:
+    #     context = await Context.create_with_config(config)
+    # else:
+    #     context = await provision_agent()
+    # context = await provision_agent()
 
-    if config:
-        context = await Context.create_with_config(config)
+    with open(CONFIG_PATH, 'r') as f:
+        config = f.read()
+
+    with open("test.json", 'r') as f:
+        test_data = json.loads(f.read())
+
+    if dict(test_data).get("contextAlreadyExist") == "true":
+        # context = Context.load_contex()
+        pass
     else:
-        context = await provision_agent()
+        try:
+            context = await Context.create_with_config(config)
+        except WalletAlreadyOpenedError:
+            await context.close_wallet()
+        with open("test.json", 'w') as f:
+            json.dump({"contextAlreadyExist": "true"}, f)
+            # f.write('{"contextAlreadyExist": true}')
 
     with open('verity-context.json', 'w') as f:
         f.write(context.to_json())
@@ -415,11 +456,7 @@ async def setup(loop):
 
     print_object(context.to_json(indent=2), '>>>', 'Context Used:')
 
-    with open('verity-context.json', 'w') as f:
-        f.write(context.to_json())
-
     await update_configs()
-
     await issuer_identifier(loop)
 
     if not issuer_did:
@@ -430,7 +467,7 @@ async def setup(loop):
         print(f'Issuer Verkey: {ANSII_GREEN}{issuer_verkey}{ANSII_RESET}')
 
 
-async def provision_agent() -> str:
+async def provision_agent():
     global context
     token = None
     if console_yes_no('Provide Provision Token', True):
@@ -459,16 +496,17 @@ async def update_webhook_endpoint():
     webhook_from_ctx: str = context.endpoint_url
 
     if not webhook_from_ctx:
-        # Default to localhost on the default port
         webhook_from_ctx = f'http://localhost:{port}'
 
-    webhook: str = console_input(f'Ngrok endpoint [{webhook_from_ctx}]', os.environ.get('WEBHOOK_URL'))
-
+    # webhook: str = console_input(f'Ngrok endpoint [{webhook_from_ctx}]', os.environ.get('WEBHOOK_URL'))
+    # webhook = "http://a98f8b9b3f74.ngrok.io/webhook/{}".format(rel_did)
+    webhook = "http://491c71ef5209.ngrok.io/webhook{}".format(rel_did)
+    # webhook = "http://18.191.133.133//webhook"
+    print(webhook, " WEEEEE")
     if not webhook:
         webhook = webhook_from_ctx
 
     print(f'Using Webhook: {ANSII_GREEN}{webhook}{ANSII_RESET}')
-    print()
     context.endpoint_url = webhook
 
     # request that verity application use specified webhook endpoint
@@ -521,7 +559,6 @@ async def setup_issuer(loop):
     issuer_setup = IssuerSetup()
 
     first_step = loop.create_future()
-
     spinner = make_spinner('Waiting for setup to complete')  # Console spinner
 
     # handler for created issuer identifier message
@@ -571,11 +608,106 @@ async def setup_issuer(loop):
 
     await first_step  # wait for request to complete
 
+application = web.Application()
+application.add_routes(routes)
 
-@routes.post('/')
+logging_format = "[%(asctime)s] %(process)d-%(levelname)s "
+logging_format += "%(module)s::%(funcName)s():l%(lineno)d: "
+logging_format += "%(message)s"
+
+logging.basicConfig(
+    format=logging_format,
+    level=logging.DEBUG
+)
+log = logging.getLogger()
+
+
+def create_qr_code(request, rel_id):
+    db = {}
+    invite_url = db.get(rel_id)
+    qr = pyqrcode.create(invite_url)
+    QR_CODE_STRING = qr.png_as_base64_str(scale=5)
+    # SEND CODE TO EMAIL
+    # send_email()
+    qr.png("qrcode.png")
+
+    # loop = asyncio.get_event_loop()
+    # await create_connection(loop)
+    #
+    # await ask_question(loop, rel_did)
+    #
+    # await issue_credential(loop, rel_did, cred_def_id)
+    return QR_CODE_STRING
+
+
+# @routes("/issue_crea")
+async def issue_creds(request):
+    # global rel_did
+    rel_did = "FUsfjKwmnHetDe65HVGw4R"
+    loop = asyncio.get_event_loop()
+    await create_connection(loop)
+
+    await ask_question(loop, rel_did)
+
+    await issue_credential(loop, rel_did, cred_def_id_fix)
+
+
+async def unpack_message(context: Context, message: bytes):
+    """
+    Extracts the message in the byte array that has been packaged and encrypted for a key that is locally held.
+    Args:
+        context (Context): an instance of the Context object initialized to a verity-application agent
+        message (bytes): the raw message received from the verity-application agent
+    Returns:
+        dict: an unencrypted messages as a JSON object
+    """
+    jwe: bytes = await crypto.unpack_message(
+        context.wallet_handle,
+        message
+    )
+    message = json.loads(jwe.decode('utf-8'))['message']
+    print("QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ")
+    print(message)
+    print("PPPPPPPPPPPPPPPPPPPPPPPPPPP")
+    return json.loads(message)
+
+
+# @routes.post('/webhook')
+# @routes.post('/')
+# @application.route("/webhook/<rel_did>", methods=["POST"])
 async def endpoint_handler(request):
+    print("endpoint_handler CALLEDDD")
     try:
-        await handlers.handle_message(context, await request.read())
+        print("endpoint_handler called")
+        # print(request.read())
+        # print(request.json())
+        # print(dir(request))
+        # print(await request.text())
+        # print(await request.message())
+        print("THHHHHHHHHHHHHHHHHH")
+        m = await request.read()
+        message = await unpack_message(context, m)
+        print("BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB")
+        # print(message, type(message))
+
+        await handlers.handle_message(context, m)
+        print("HADEDDJBJBIJIBJBHJBKJHBKHBKHJBKHBKHBKBKIBIBHJHBJHVJUHJ")
+        # relationship_did = request.match_info.get("relationship_did", "")
+
+        if message['@type'] == 'did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/trust_ping/1.0/sent-response':
+        # # if message['@type'] == 'did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/connections/1.0/response-sent':
+            print("RESPONSE SENTTTTTTTTTTTTTTTTTTTTTTTTTTTT")
+
+            print(message)
+            local_loop = asyncio.get_event_loop()
+            relationship_did = message.get("relationship")
+            print("DIDDDDDDDm ", relationship_did)
+
+            await create_connection(local_loop)
+            await ask_question(local_loop, relationship_did)
+            await issue_credential(local_loop, relationship_did, cred_def_id_fix)
+            print("CREDSSSSSSSSSSSSSSSS SENTTTTTTTTTTTT")
+
         return web.Response(text='Success')
     except Exception as e:
         traceback.print_exc()
@@ -585,20 +717,88 @@ async def endpoint_handler(request):
 async def main(loop):
     global port
     global server
-
-    app = web.Application(loop=loop)
-    app.add_routes(routes)
-
     # noinspection PyDeprecation
-    server = await loop.create_server(app.make_handler(), '0.0.0.0', port)
+    # server = await loop.create_server(app.make_handler(), '0.0.0.0', port)
 
     print('Listening on port {}'.format(port))
+    await loop.create_task(example(loop))
 
-    #await loop.create_task(example(loop))
 
-    return web.Response(text='Success')
+def get_or_create_eventloop():
+    try:
+        return asyncio.get_event_loop()
+    except RuntimeError as ex:
+        if "There is no current event loop in thread" in str(ex):
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            return asyncio.get_event_loop()
 
+
+def get_invitation_url():
+    mainloop = get_or_create_eventloop()
+    mainloop.run_until_complete(main(mainloop))
+
+
+# @application.route("/register")
+async def register(request):
+    # asyncio.set_event_loop(uvloop.new_event_loop())
+    # server = app.create_server(host="0.0.0.0", port=8000, return_asyncio_server=True)
+    global loop
+    loop = asyncio.get_event_loop()
+    # loop.set_task_factory(context.task_factory)
+    # task = asyncio.ensure_future(server)
+    # try:
+    #     loop.run_forever()
+    # except:
+    #     loop.stop()
+    global QR_CODE_STRING
+
+    print("QQQQQQQQQQQQQQQQQQQQQQQQQQQ")
+    print(QR_CODE_STRING)
+
+    # html_img = '<img src="data:image/png;base64,{}">'.format(QR_CODE_STRING)
+    print("++++++++++++++++++++++++++++")
+    # print(html_img)
+    # return make_response(jsonify({"message": "done"}), 200)
+    # await main(loop)
+    await example(loop)
+    print("imMMMMMMMMMMMMMMMMMMDDDDDDDDD")
+    # print(image_source, QR_CODE_STRING)
+    image_source = "data:image/png;base64,{}".format(QR_CODE_STRING)
+    # return json_response({"status": "Done"})
+    response = aiohttp_jinja2.render_template(
+        "result.html", request=request,
+        context={"image_source": image_source}
+    )
+    return response
+    # return render_template('result.html', image_source=image_source)
+    # return web.Response(text="text")
+    # return render_template('result.html', image_source=image_source)
+
+
+async def home(request):
+    response = aiohttp_jinja2.render_template("index.html", request=request, context={})
+    return response
+
+
+async def res_home(request):
+    response = aiohttp_jinja2.render_template("index.html", request=request, context={})
+    return response
+
+
+application.add_routes(
+    [web.get('/', home),
+     web.get('/reg', res_home),
+     web.post('/webhook', endpoint_handler),
+     web.get('/create_qr__code', create_qr_code),
+     web.get('/issue_crea', issue_creds),
+     web.get('/register', register)]
+)
 
 if __name__ == '__main__':
-    mainloop = asyncio.get_event_loop()
-    mainloop.run_until_complete(main(mainloop))
+    aiohttp_jinja2.setup(
+        application, loader=jinja2.FileSystemLoader(os.path.join(os.getcwd(), "templates"))
+    )
+    web.run_app(application)
+
+
