@@ -4,4 +4,5 @@ pyqrcode==1.2.1
 pypng==0.0.20
 halo==0.0.29
 virtualenv
-aiohttp_jinja2
+jinja2==2.11.2
+aiohttp_jinja2==1.4.2
